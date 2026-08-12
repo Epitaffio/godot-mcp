@@ -116,7 +116,10 @@ export const TOOL_DEFINITIONS: ToolDef[] = [
 
   // TileMap (6)
   { name: "tilemap_set_cell", description: "Set a single tile cell", method: "tilemap_set_cell", params: [{ name: "node_path", type: "string", required: true }, { name: "x", type: "number" }, { name: "y", type: "number" }, { name: "source", type: "number" }, { name: "atlas_x", type: "number" }, { name: "atlas_y", type: "number" }] },
-  { name: "tilemap_fill_rect", description: "Fill rectangular region with tiles", method: "tilemap_fill_rect", params: [{ name: "node_path", type: "string", required: true }, { name: "x", type: "number" }, { name: "y", type: "number" }, { name: "width", type: "number" }, { name: "height", type: "number" }] },
+  // source/atlas_x/atlas_y were missing here while the GDScript handler already
+  // read them, so every fill painted source 0 at atlas (0, 0) regardless of the
+  // tile you wanted. Mirrors tilemap_set_cell above.
+  { name: "tilemap_fill_rect", description: "Fill rectangular region with tiles", method: "tilemap_fill_rect", params: [{ name: "node_path", type: "string", required: true }, { name: "x", type: "number" }, { name: "y", type: "number" }, { name: "width", type: "number" }, { name: "height", type: "number" }, { name: "source", type: "number" }, { name: "atlas_x", type: "number" }, { name: "atlas_y", type: "number" }] },
   { name: "tilemap_get_cell", description: "Get tile data at cell", method: "tilemap_get_cell", params: [{ name: "node_path", type: "string", required: true }, { name: "x", type: "number" }, { name: "y", type: "number" }] },
   { name: "tilemap_clear", description: "Clear all cells", method: "tilemap_clear", params: [{ name: "node_path", type: "string", required: true }] },
   { name: "tilemap_get_info", description: "TileMapLayer info and tile set sources", method: "tilemap_get_info", params: [{ name: "node_path", type: "string", required: true }] },
