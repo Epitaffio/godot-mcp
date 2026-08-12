@@ -146,7 +146,7 @@ func _update_property(params: Dictionary) -> Dictionary:
 	if property.is_empty():
 		return _err("Missing 'property'")
 
-	var parsed := TypeParser.parse(value_text)
+	var parsed: Variant = _coerce_to_property_type(node, property, TypeParser.parse(value_text))
 	var old_value = node.get(property)
 	editor_plugin.get_undo_redo().create_action("MCP Update Property")
 	editor_plugin.get_undo_redo().add_do_property(node, property, parsed)
@@ -158,6 +158,43 @@ func _update_property(params: Dictionary) -> Dictionary:
 		"property": property,
 		"value": _serialize_value(parsed),
 	})
+
+
+## Turn a string into the Object the property actually expects.
+##
+## TypeParser deliberately hands back "res://..." and node paths as plain
+## Strings, and it is right to: plenty of properties genuinely want the string
+## (@export_file fields, InstanceResource.map_path, ...). But that left every
+## typed Object property unassignable -- Resource slots and @export node
+## references -- which is most of what authoring a scene consists of.
+##
+## Coerce here instead, where the destination is known: look the property up in
+## the node's own property list and convert only when it really expects an
+## Object. Resources load from res:// or uid://; anything else is treated as a
+## node path and resolved against the edited scene.
+##
+## Unresolvable values are returned untouched rather than nulled, so a typo
+## surfaces as a visibly wrong value in the response instead of silently
+## clearing the slot.
+func _coerce_to_property_type(node: Object, property: String, value: Variant) -> Variant:
+	if typeof(value) != TYPE_STRING:
+		return value
+
+	var expects_object: bool = false
+	for prop: Dictionary in node.get_property_list():
+		if String(prop.get("name", "")) == property:
+			expects_object = int(prop.get("type", TYPE_NIL)) == TYPE_OBJECT
+			break
+	if not expects_object:
+		return value
+
+	var text: String = value
+	if text.begins_with("res://") or text.begins_with("uid://"):
+		var resource: Resource = ResourceLoader.load(text)
+		return resource if resource != null else value
+
+	var target: Node = _resolve_node(text)
+	return target if target != null else value
 
 
 func _get_node_properties(params: Dictionary) -> Dictionary:
