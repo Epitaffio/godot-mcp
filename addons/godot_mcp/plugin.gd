@@ -67,12 +67,29 @@ func _inject_autoloads() -> void:
 		ProjectSettings.save()
 
 
+## Removes our autoloads, whether or not this editor session is the one that put
+## them there.
+##
+## This used to iterate _injected, which only records a key _inject_autoloads
+## actually had to create. Reopen the editor with the plugin already enabled and
+## the settings are already present, so nothing is recorded — and disabling the
+## plugin then left all three autoloads sitting in project.godot. From there they
+## ride into commits, and into exported builds: an editor-only remote-control
+## channel shipped to players.
+##
+## Matched on the script path rather than the setting name, so a project with its
+## own autoload that happens to share a name keeps it.
 func _remove_autoloads() -> void:
 	var changed := false
-	for key in _injected:
-		if ProjectSettings.has_setting(key):
-			ProjectSettings.set_setting(key, null)
-			changed = true
+	for entry in AUTOLOADS:
+		var key: String = entry[0]
+		var script: String = entry[1]
+		if not ProjectSettings.has_setting(key):
+			continue
+		if str(ProjectSettings.get_setting(key)).trim_prefix("*") != script:
+			continue # someone else's autoload under the same name — leave it alone
+		ProjectSettings.set_setting(key, null)
+		changed = true
 	_injected.clear()
 	if changed:
 		ProjectSettings.save()
